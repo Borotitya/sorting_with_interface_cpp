@@ -10,7 +10,7 @@
 
 #pragma comment(lib, "comctl32.lib")
 
-#define IDC_UNPUT_ARRAY_EDIT 1001
+#define IDC_INPUT_ARRAY_EDIT 1001
 #define IDC_SORT_TYPE_COMBO 1002
 #define IDC_SORT_BUTTON 1003
 #define IDC_SHOW_STEPS_BUTTON 1004
@@ -449,7 +449,7 @@ public:
 };
 
 // Главное окно
-class MainWindow : public IWindow
+class MainWindow
 {
 private: 
 	HWND hMainWnd; // дескриптор главного окна
@@ -473,8 +473,128 @@ public:
 		delete time_window; // удаление окна с временем сортировки
 		delete array_view_window; // удаление окна с отсортированным массивом
 	}
-	void init_ui(HWND hwnd) 
-	{
+	void init_ui(HWND hwnd) {
+		hMainWnd = hwnd;
 
+		CreateWindowEx(0, L"STATIC", L"Введите массив (числа через пробел):", WS_CHILD | WS_VISIBLE,
+			10, 10, 300, 20, hMainWnd, NULL, NULL, NULL);
+
+		CreateWindowEx(0, L"EDIT", L"", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE,
+			10, 40, 300, 60, hMainWnd, (HMENU)IDC_INPUT_ARRAY_EDIT, NULL, NULL);
+
+		CreateWindowEx(0, L"STATIC", L"Выберите тип сортировки:", WS_CHILD | WS_VISIBLE,
+			10, 120, 200, 20, hMainWnd, NULL, NULL, NULL);
+
+		HWND hCombo = CreateWindowEx(0, L"COMBOBOX", L"", CBS_DROPDOWNLIST | WS_CHILD | WS_VISIBLE,
+			10, 140, 200, 100, hwnd, (HMENU)IDC_SORT_TYPE_COMBO, NULL, NULL);
+
+		for (auto sort_algo : sort_manager->get_sort_algorithms()) {
+			SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)sort_algo->get_sort_name().c_str());
+		}
+
+		CreateWindowEx(0, L"BUTTON", L"Сортировать", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+			10, 180, 100, 30, hMainWnd, (HMENU)IDC_SORT_BUTTON, NULL, NULL);
+
+		CreateWindowEx(0, L"BUTTON", L"Показать этапы", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+			120, 180, 120, 30, hMainWnd, (HMENU)IDC_SHOW_STEPS_BUTTON, NULL, NULL);
+
+		CreateWindowEx(0, L"BUTTON", L"Показать время", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+			250, 180, 120, 30, hMainWnd, (HMENU)IDC_SHOW_TIME_BUTTON, NULL, NULL);
+
+		CreateWindowEx(0, L"BUTTON", L"Показать массивы", WS_CHILD | WS_VISIBLE | WS_TABSTOP | BS_DEFPUSHBUTTON,
+			10, 220, 120, 30, hMainWnd, (HMENU)IDC_VIEW_ARRAY_BUTTON, NULL, NULL);
+	}
+
+	void sort_array() {
+		wchar_t input[1024];
+		GetDlgItemTextW(hMainWnd, IDC_INPUT_ARRAY_EDIT, input, 1024);
+		int sort_index = SendDlgItemMessageW(hMainWnd, IDC_SORT_TYPE_COMBO, CB_GETCURSEL, 0, 0);
+		if (sort_index == CB_ERR) {
+			MessageBoxW(hMainWnd, L"Пожалуйста, выберите тип сортировки.", L"Ошибка", MB_OK | MB_ICONERROR);
+			return;
+		}
+
+		sort_manager->sort_array(input, sort_index);
+
+		MessageBoxW(hMainWnd, L"Сортировка завершена.", L"Уведомление", MB_OK | MB_ICONINFORMATION);
+	}
+
+	// отображение окна с ходами сортировки
+	void show_steps_window() 
+	{
+		step_window->show(hMainWnd, sort_manager); // отображение окна с ходами сортировки
+	}
+
+	// отображение окна с временем сортировки
+	void show_time_window()
+	{
+		time_window->show(hMainWnd, sort_manager); // отображение окна с временем сортировки
+	}
+
+	//  отображение окна с отсортированным массивом
+	void show_array_view_window()
+	{
+		array_view_window->show(hMainWnd, sort_manager); // отображение окна с отсортированным массивом
 	}
 };
+
+// Прототипы функций
+LRESULT CALLBACK MainWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
+{
+	static  MainWindow* main_window = nullptr; // главное окно
+
+	switch (message)
+	{
+		case WM_CREATE:
+			main_window = new MainWindow(); // создание главного окна
+			main_window->init_ui(hwnd); // инициализация интерфейса
+			break;
+		case WM_COMMAND:
+			switch (LOWORD(wParam))
+			{
+				case IDC_SORT_BUTTON:
+					main_window->sort_array(); // сортировка массива
+					break;
+				case IDC_SHOW_STEPS_BUTTON:
+					main_window->show_steps_window(); // отображение окна с ходами сортировки
+					break;
+				case IDC_SHOW_TIME_BUTTON:
+					main_window->show_time_window(); // отображение окна с временем сортировки
+					break;
+				case IDC_VIEW_ARRAY_BUTTON:
+					main_window->show_array_view_window(); // отображение окна с отсортированным массивом
+					break;
+			}
+			break;
+		case WM_DESTROY:
+			delete main_window; // удаление главного окна
+			PostQuitMessage(0); // посылка сообщения о завершении приложения
+			break;
+		default:
+			return DefWindowProc(hwnd, message, wParam, lParam); // обработка сообщения по умолчанию
+	}
+	return 0; // возврат значения
+}
+
+int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+{
+	WNDCLASSW wc = { 0 }; // класс окна
+	wc.lpszClassName = L"MainWindowClass"; // имя класса
+	wc.lpfnWndProc = MainWndProc; // оконная процедура
+	wc.hInstance = hInstance; // дескриптор приложения
+	RegisterClassW(&wc); // регистрация класса
+
+	HWND hwnd = CreateWindowW(L"MainWindowClass", L"Сортировщик", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_THICKFRAME,
+		CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, NULL, NULL, hInstance, NULL); // создание окна
+
+	ShowWindow(hwnd, nCmdShow); // отображение окна
+	UpdateWindow(hwnd); // обновление окна
+
+	MSG msg; // сообщение
+	while (GetMessage(&msg, NULL, 0, 0)) // получение сообщения
+	{
+		TranslateMessage(&msg); // трансляция сообщения
+		DispatchMessage(&msg); // отправка сообщения
+	}
+	return 0;
+}
