@@ -271,5 +271,210 @@ public:
 		chrono::duration<double> diff = end - start; // разница времени
 		last_sort_time = diff.count(); // время сортировки
 	}
+	vector<ISort*> get_sort_algorithms() { return sort_algorithms; } // возвращает список сортировок
+	vector<vector<int>> get_steps() { return steps; } // возвращает ходы сортировки
+	vector<int> get_sorted_array() { return sorted_array; } // возвращает отсортированный массив
+	double get_last_sort_time() { return last_sort_time; } // возвращает время сортировки
+};
 
+// Окно сортировки массива 
+class StepWindow : public IWindow 
+{
+public:
+	void show(HWND parent, void* data) 
+	{
+		ISortManager* manager = static_cast<ISortManager*>(data); // менеджер сортировок
+
+		WNDCLASS wc = { 0 }; // класс окна
+		wc.lpfnWndProc = StepWindowProc; // оконная процедура
+		wc.hInstance = GetModuleHandle(NULL); // дескриптор приложения
+		wc.lpszClassName = L"StepWindowClass"; // имя класса
+		RegisterClass(&wc); // регистрация класса
+
+		HWND hwnd = CreateWindowW(L"StepWindowClass", L"Этапы сортировки", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_THICKFRAME,
+			CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, parent, NULL, GetModuleHandle(NULL), manager); // создание окна
+
+		ShowWindow(hwnd, SW_SHOW); // отображение окна
+		UpdateWindow(hwnd); // обновление окна
+	}
+
+	// оконная процедура
+	static LRESULT CALLBACK StepWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
+	{
+		static ISortManager* manager = nullptr; // менеджер сортировок
+		
+		if (message == WM_CREATE) 
+		{
+			CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam; // создание структуры окна 
+			manager = static_cast<ISortManager*>(pCreate->lpCreateParams); // менеджер сортировок 
+		}
+
+		switch(message)
+		{
+			case WM_CREATE:
+				if (manager) 
+				{
+					int y = 10; // координата y 
+					for (const auto& step : manager->get_steps()) 
+					{
+						wstringstream ss; // строковый поток
+						for (int num : step)
+						{
+							ss << num << L" "; // добавление числа в строку
+						}
+						CreateWindowW(L"STATIC", ss.str().c_str(), WS_CHILD | WS_VISIBLE, 10, y, 360, 20, hwnd, NULL, NULL, NULL); // создание статического текста
+						y += 30; // увеличение координаты y
+					}
+				}
+				break; // завершение обработки сообщения
+			case WM_DESTROY:
+				break; // завершение обработки сообщения
+			default:
+				return DefWindowProc(hwnd, message, wParam, lParam); // обработка сообщения по умолчанию
+		}
+		return 0; // возврат значения
+		return 0; // возврат значения
+	}
+};
+
+
+// Окно времени сортировки
+class TimeWindow : public IWindow
+{
+public:
+
+	void show(HWND parent, void* data) 
+	{
+		ISortManager* manager = static_cast<ISortManager*>(data); // менеджер сортировок
+
+		WNDCLASS wc = { 0 }; // класс окна
+		wc.lpfnWndProc = TimeWindowProc; // оконная процедура
+		wc.hInstance = GetModuleHandle(NULL); // дескриптор приложения
+		wc.lpszClassName = L"TimeWindowClass"; // имя класса
+		RegisterClass(&wc); // регистрация класса
+
+		HWND hwnd = CreateWindowW(L"TimeWindowClass", L"Время сортировки", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_THICKFRAME,
+						CW_USEDEFAULT, CW_USEDEFAULT, 300, 200, parent, NULL, GetModuleHandle(NULL), manager); // создание окна
+
+		ShowWindow(hwnd, SW_SHOW); // отображение окна
+		UpdateWindow(hwnd); // обновление окна
+	}
+	static LRESULT CALLBACK TimeWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+	{
+		static ISortManager* manager = nullptr; // менеджер сортировок
+
+		if (message == WM_CREATE)
+		{
+			CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam; // создание структуры окна
+			manager = static_cast<ISortManager*>(pCreate->lpCreateParams); // менеджер сортировок
+		}
+
+		switch (message)
+		{
+		case WM_CREATE:
+			if (manager)
+			{
+				wstringstream ss; // строковый поток
+				ss << L"Время сортировки: " << manager->get_last_sort_time() << L" мс"; // добавление времени сортировки
+				CreateWindowW(L"STATIC", ss.str().c_str(), WS_CHILD | WS_VISIBLE, 10, 10, 260, 20, hwnd, NULL, NULL, NULL); // создание статического текста
+			}
+			break; // завершение обработки сообщения
+		case WM_DESTROY:
+			break; // завершение обработки сообщения
+		default:
+			return DefWindowProc(hwnd, message, wParam, lParam); // обработка сообщения по умолчанию
+		}
+		return 0; // возврат значения
+	}
+};
+
+class ArrayViewWindow : public IWindow 
+{
+public:
+
+	void show(HWND parent, void* data)
+	{
+		ISortManager* manager = static_cast<ISortManager*>(data); // менеджер сортировок
+
+		WNDCLASS wc = { 0 }; // класс окна
+		wc.lpfnWndProc = ArrayViewWindowProc; // оконная процедура
+		wc.hInstance = GetModuleHandle(NULL); // дескриптор приложения
+		wc.lpszClassName = L"ArrayViewWindowClass"; // имя класса
+		RegisterClass(&wc); // регистрация классa
+
+		HWND hwnd = CreateWindowW(L"ArrayViewWindowClass", L"Отсортированный массив", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_THICKFRAME,
+						CW_USEDEFAULT, CW_USEDEFAULT, 400, 300, parent, NULL, GetModuleHandle(NULL), manager); // создание окна
+
+		ShowWindow(hwnd, SW_SHOW); // отображение окна
+		UpdateWindow(hwnd); // обновление окна
+	}
+	static LRESULT CALLBACK ArrayViewWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) 
+	{
+		static ISortManager* manager = nullptr; // менеджер сортировок 
+
+		if (message == WM_CREATE) 
+		{
+			CREATESTRUCT* pCreate = (CREATESTRUCT*)lParam; // создание структуры окна
+			manager = static_cast<ISortManager*>(pCreate->lpCreateParams); // менеджер сортировок
+		}
+
+		switch (message) 
+		{
+			case WM_CREATE:
+				if (message) 
+				{
+					wstringstream ssOriginal, ssSorted; // строковые потоки 
+					ssOriginal << L"Исходный массив: "; // добавление текста
+					for (int num : manager->get_sorted_array())
+					{
+						ssOriginal << num << L" "; // добавление числа
+					}
+					ssSorted << L"Отсортированный массив: "; // добавление текста
+					for (int num : manager->get_sorted_array())
+					{
+						ssSorted << num << L" "; // добавление числа
+					}
+
+					CreateWindowW(L"STATIC", ssOriginal.str().c_str(), WS_CHILD | WS_VISIBLE, 10, 10, 360, 20, hwnd, NULL, NULL, NULL); // создание статического текста
+					CreateWindowW(L"STATIC", ssSorted.str().c_str(), WS_CHILD | WS_VISIBLE, 10, 40, 360, 20, hwnd, NULL, NULL, NULL); // создание статического текста
+				}
+				break; 
+			case WM_DESTROY:
+				break;
+			default: 
+				return DefWindowProc(hwnd, message, wParam, lParam); // обработка сообщения по умолчанию
+		}
+		return 0;
+	}
+};
+
+// Главное окно
+class MainWindow : public IWindow
+{
+private: 
+	HWND hMainWnd; // дескриптор главного окна
+	ISortManager* sort_manager; // менеджер сортировок
+	IWindow* step_window; // окно с ходами сортировки
+	IWindow* time_window; // окно с временем сортировки
+	IWindow* array_view_window; // окно с отсортированным массивом	
+
+public:
+	MainWindow() 
+	{
+		sort_manager = new SortManager(); // создание менеджера сортировок
+		step_window = new StepWindow(); // создание окна с ходами сортировки
+		time_window = new TimeWindow(); // создание окна с временем сортировки
+		array_view_window = new ArrayViewWindow(); // создание окна с отсортированным массивом
+	}
+	~MainWindow() 
+	{
+		delete sort_manager; // удаление менеджера сортировок
+		delete step_window; // удаление окна с ходами сортировки
+		delete time_window; // удаление окна с временем сортировки
+		delete array_view_window; // удаление окна с отсортированным массивом
+	}
+	void init_ui(HWND hwnd) 
+	{
+
+	}
 };
