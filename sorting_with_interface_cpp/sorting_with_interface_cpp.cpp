@@ -32,6 +32,7 @@ __interface ISortManager
 	void sort_array(const wstring&, int); // сортировка
 	vector<ISort*> get_sort_algorithms(); // возвращает список сортировок
 	vector<vector<int>> get_steps(); // возвращает ходы сортировки
+	vector<int> get_original_array(); // возвращает исходный массив
 	vector<int> get_sorted_array(); // возвращает отсортированный массив
 	double get_last_sort_time(); // возвращает время сортировки
 };
@@ -268,11 +269,12 @@ public:
 		auto start = chrono::high_resolution_clock::now(); // начало отсчета времени
 		sort_algorithms[sort_index]->sort(sorted_array, steps); // сортировка
 		auto end = chrono::high_resolution_clock::now(); // конец отсчета времени
-		chrono::duration<double> diff = end - start; // разница времени
+		chrono::duration<double, milli> diff = end - start; // разница времени
 		last_sort_time = diff.count(); // время сортировки
 	}
 	vector<ISort*> get_sort_algorithms() { return sort_algorithms; } // возвращает список сортировок
 	vector<vector<int>> get_steps() { return steps; } // возвращает ходы сортировки
+	vector<int> get_original_array() { return original_array; } // возвращает исходный массив
 	vector<int> get_sorted_array() { return sorted_array; } // возвращает отсортированный массив
 	double get_last_sort_time() { return last_sort_time; } // возвращает время сортировки
 };
@@ -354,7 +356,7 @@ public:
 		RegisterClass(&wc); // регистрация класса
 
 		HWND hwnd = CreateWindowW(L"TimeWindowClass", L"Время сортировки", WS_OVERLAPPEDWINDOW | WS_VISIBLE | WS_THICKFRAME,
-						CW_USEDEFAULT, CW_USEDEFAULT, 300, 200, parent, NULL, GetModuleHandle(NULL), manager); // создание окна
+			CW_USEDEFAULT, CW_USEDEFAULT, 300, 200, parent, NULL, GetModuleHandle(NULL), manager); // создание окна
 
 		ShowWindow(hwnd, SW_SHOW); // отображение окна
 		UpdateWindow(hwnd); // обновление окна
@@ -425,7 +427,7 @@ public:
 				{
 					wstringstream ssOriginal, ssSorted; // строковые потоки 
 					ssOriginal << L"Исходный массив: "; // добавление текста
-					for (int num : manager->get_sorted_array())
+					for (int num : manager->get_original_array())
 					{
 						ssOriginal << num << L" "; // добавление числа
 					}
